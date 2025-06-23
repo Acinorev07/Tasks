@@ -1,56 +1,64 @@
-import { DATA } from "@/app/api/data";
-import { nanoid } from "nanoid";
+//src/app/api/tasks/route.ts
 
-interface Task {
-  id: string;
-  name: string;
-  completed: boolean;
-}
+import { db } from "@/lib/firebase";
+import {collection, getDocs, addDoc} from "firebase/firestore"
+import { NextResponse } from "next/server";
+
 
 export async function GET() {
-  return Response.json(DATA);
+  try {
+    
+    const querySnapshot = await getDocs(collection(db, "tasks"));
+    const tasks = querySnapshot.docs.map(doc=>({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return NextResponse.json(tasks);
+
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    return NextResponse.json(
+      {error: "Error al obtener tareas"},
+      {status: 500}
+    );
+  }
+  // return Response.json(DATA);
 }
 
 export async function POST(request: Request) {
   try {
     // Parsear el cuerpo de la petición
-    const { name, completed }: Partial<Task> = await request.json();
+    const { name, completed=false }= await request.json();
     
     // Validar los datos recibidos
-    if (!name || typeof completed !== 'boolean') {
-      return new Response(JSON.stringify({ error: "Invalid task data" }), {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+    if (!name) {
+      return NextResponse.json(
+        {error:"Name is required"},
+        {status:400}
+      );
     }
 
     // Crear nueva tarea
-    const newTask: Task = {
-      id: `todo-${nanoid()}`,
+    const docRef = await addDoc(collection(db, "tasks"),{
       name,
       completed,
-    };
-
-    // Agregar a DATA (en un caso real usarías una base de datos)
-    DATA.push(newTask);
+      createdAt: new Date()
+    })
 
     // Devolver respuesta exitosa
-    return new Response(JSON.stringify(newTask), {
-      status: 201, // 201 Created es más apropiado para POST exitosos
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    return NextResponse.json(
+      {id: docRef.id, name, completed},
+      {status:201}
+    );
+
   } catch (error) {
+    console.error('Error fetching tasks:', error);
     // Manejo de errores
-    return new Response(JSON.stringify({ error: "Invalid JSON format" }), {
-      status: 400,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+     return NextResponse.json(
+      { error: "Error al crear tarea" },
+      { status: 500 }
+    );
   }
 }
 

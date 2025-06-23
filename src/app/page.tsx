@@ -5,7 +5,7 @@ import Todo from "./components/Todo";
 import Form from "./components/Form";
 import FilterButton from "./components/FilterButton";
 import { useState, useRef, useEffect } from "react";
-import { DATA } from "@/app/api/data"
+
 
 function usePrevious<T>(value:T): T | undefined {
   const ref = useRef<T | undefined>(undefined);
@@ -43,7 +43,7 @@ export default function Home() {
   const [filter, setFilter] = useState("All");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  console.log("DATA: ", DATA);
+ 
   
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -67,22 +67,26 @@ export default function Home() {
     fetchTasks();
   }, []);
 
+  
+
   //Definir si una tarea esta completa o no
   async function toggleTaskCompleted(id:string) {
     
-      try {
-    // Primero encontramos la tarea a actualizar
-    const taskToUpdate = tasks.find(task => task.id === id);
-    if (!taskToUpdate) return;
+    try {
+    // Actualización optimista (cambia el estado inmediatamente)
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
 
-    // Hacemos la petición PUT a la API
     const response = await fetch(`http://localhost:3000/api/tasks/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        completed: !taskToUpdate.completed
+        completed: !tasks.find(t => t.id === id)?.completed
       }),
     });
 
@@ -90,15 +94,20 @@ export default function Home() {
       throw new Error('Error al actualizar la tarea');
     }
 
-    // Actualizamos el estado local con la respuesta
+    // Si la API devuelve la tarea actualizada, úsala:
     const updatedTask = await response.json();
-    setTasks(tasks.map(task => 
-      task.id === id ? updatedTask : task
-    ));
+
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === id ? updatedTask : task
+      )
+    );
 
   } catch (error) {
     console.error('Error:', error);
     setError('No se pudo actualizar el estado de la tarea');
+    // Revertir el cambio si falla
+    setTasks(tasks);
   }
 
     
@@ -168,7 +177,7 @@ export default function Home() {
  .map((task)=>(
  
     <Todo
-       key={task.id}
+       key={`${task.id}-${task.completed}`}
        id={task.id}
        name={task.name}
        completed={task.completed}
@@ -235,6 +244,14 @@ export default function Home() {
     }
   }, [tasks.length, prevTaskLength])
 
+  // Mostrar estados de carga/error
+  if (isLoading) {
+    return <div className="loading">Cargando tareas...</div>;
+  }
+
+  if (error) {
+    return <div className="error">Error: {error}</div>;
+  }
 
   return (
       <div className="todoapp stack-large">
