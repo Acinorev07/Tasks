@@ -57,19 +57,26 @@ export async function PUT(request: Request){
 }
 
 
-export async function DELETE(request:Request, {params}:{params:{id:string}}){
+export async function DELETE(request: Request) {
+    try {
+        const url = new URL(request.url);
+        const pathSegments = url.pathname.split("/");
+        const id = pathSegments[pathSegments.length - 1] as string; // Forzamos el tipo
 
-    try{
-    const {id}= params;
+        if (!id) {
+            return NextResponse.json(
+                { error: "ID is required" },
+                { status: 400 }
+            );
+        }
 
-       await deleteDoc(doc(db, "tasks", id));
-       return NextResponse.json({success: true}, {status:200});
-     }catch(error){
-      console.error('Error fetching tasks:', error);
-       return NextResponse.json(
-      { error: "Error al eliminar tarea" },
-      { status: 500 }
-    );
+        await deleteDoc(doc(db, "tasks", id));
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        return NextResponse.json(
+            { error: "Error al eliminar tarea" },
+            { status: 500 }
+        );
     }
-
 }
