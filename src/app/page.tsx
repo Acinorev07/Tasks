@@ -1,103 +1,256 @@
-import Image from "next/image";
+// src/app/page.tsx
+'use client'
+
+import Todo from "./components/Todo";
+import Form from "./components/Form";
+import FilterButton from "./components/FilterButton";
+import { useState, useRef, useEffect } from "react";
+import { DATA } from "@/app/api/data"
+
+function usePrevious<T>(value:T): T | undefined {
+  const ref = useRef<T | undefined>(undefined);
+  useEffect(()=>{
+    ref.current = value;
+  });
+  return ref.current;
+}
+
+
+interface Task {
+  id:string;
+  name: string;
+  completed: boolean;
+}
+
+const FILTER_MAP: {
+  All: () => boolean;
+  Active: (task: Task) => boolean;
+  Completed: (task : Task) => boolean;
+} = {
+  All: () => true,
+  Active: (task) => !task.completed,
+  Completed: (task) => task.completed,
+};
+
+const FILTER_NAMES = Object.keys(FILTER_MAP)
+
+// const res = await fetch('http://localhost:3000/api/tasks');
+// const data = await res.json();
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filter, setFilter] = useState("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  console.log("DATA: ", DATA);
+  
+  const listHeadingRef = useRef<HTMLHeadingElement>(null);
+
+   // Cargar tareas al montar el componente
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/tasks');
+        if (!res.ok) {
+          throw new Error('Error al cargar las tareas');
+        }
+        const data = await res.json();
+        setTasks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error desconocido');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  //Definir si una tarea esta completa o no
+  async function toggleTaskCompleted(id:string) {
+    
+      try {
+    // Primero encontramos la tarea a actualizar
+    const taskToUpdate = tasks.find(task => task.id === id);
+    if (!taskToUpdate) return;
+
+    // Hacemos la petición PUT a la API
+    const response = await fetch(`http://localhost:3000/api/tasks/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        completed: !taskToUpdate.completed
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al actualizar la tarea');
+    }
+
+    // Actualizamos el estado local con la respuesta
+    const updatedTask = await response.json();
+    setTasks(tasks.map(task => 
+      task.id === id ? updatedTask : task
+    ));
+
+  } catch (error) {
+    console.error('Error:', error);
+    setError('No se pudo actualizar el estado de la tarea');
+  }
+
+    
+  }
+
+  async function deleteTask(id:string) {
+
+    try{
+
+      const response = await fetch(`http://localhost:3000/api/tasks/${id}`,{
+        method:'DELETE',
+      });
+
+      if (!response.ok){
+        throw new Error('Error al eliminar la tarea');
+      }
+
+      const remainingTasks= tasks.filter((task)=> id !== task.id);
+      setTasks(remainingTasks);
+
+    }catch (error) {
+    console.error('Error:', error);
+    setError('No se pudo eliminar la tarea');
+    }
+    
+    console.log(id);
+
+  }
+
+  async function editTask(id: string, newName: string){
+
+    try{
+      const response = await fetch (`http://localhost:3000/api/tasks/${id}`,
+        {
+          method:'PUT',
+          headers:{
+            'Content-Type':'application/json',
+          },
+          body: JSON.stringify({
+            name: newName
+          }),
+        });
+        if(!response.ok){
+          throw new Error ('Error al editar la tarea');
+        }
+
+        const updatedTask = await response.json();
+
+        // Actualizar el estado local
+        setTasks(prevTasks => 
+          prevTasks.map(task => 
+            task.id === id ? updatedTask : task
+          )
+        );
+
+
+    }catch (error) {
+    console.error('Error:', error);
+    setError('No se pudo editar la tarea');
+  }
+   
+  }
+
+
+ const taskList = tasks
+ .filter(FILTER_MAP[filter as keyof typeof FILTER_MAP])
+ .map((task)=>(
+ 
+    <Todo
+       key={task.id}
+       id={task.id}
+       name={task.name}
+       completed={task.completed}
+       toggleTaskCompleted={toggleTaskCompleted}
+       deleteTask={deleteTask}
+       editTask={editTask}
+    />
+  ));
+
+  async function addTask(name:string){
+    try{
+      const response = await fetch('http://localhost:3000/api/tasks',{
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          completed:false
+        }),
+      });
+
+      if(!response.ok){
+        throw new Error ('Error al añadir la tarea');
+      }
+
+      const newTask = await response.json();
+      console.log('New Task:', newTask);
+      setTasks([...tasks, newTask])
+    }catch(error){
+      console.error('Error: ', error);
+      setError('No se pudo añadir la tarea');
+    }
+    // const newTask = {id: `todo-${nanoid()}`, name, completed: false};
+    // setTasks([...tasks, newTask]);
+
+  }
+
+  const filterList = FILTER_NAMES.map((name) =>(
+
+    <FilterButton 
+      key={name} 
+      name={name}
+      isPressed = {name===filter}
+      setFilter ={setFilter}
+      />
+  ));
+
+
+
+ 
+
+  const tasksNoun = taskList.length !== 1 ? "tasks" : "task";
+  const headingText = `${taskList.length} ${tasksNoun} remaining`;
+
+  
+  console.log("Datos", taskList);
+
+  const prevTaskLength = usePrevious(tasks.length);
+
+  useEffect(()=>{
+    if(prevTaskLength !== undefined && tasks.length < prevTaskLength){
+      listHeadingRef.current?.focus();
+    }
+  }, [tasks.length, prevTaskLength])
+
+
+  return (
+      <div className="todoapp stack-large">
+         <h1>TodoMatic</h1>
+          <Form  addTask={addTask}/>
+         <div className="filters btn-group stack-exception">
+          {filterList}
+         </div>
+         <h2 id="list-heading" tabIndex={-1} ref={listHeadingRef}>{headingText}</h2>
+         <ul
+          role="list"
+          className="todo-list stack-large stack-exception"
+          aria-labelledby="list-heading"
+         >
+          {taskList}
+         </ul>
+      </div>
   );
 }
