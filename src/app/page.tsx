@@ -51,7 +51,7 @@ export default function Home() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/tasks');
+        const res = await fetch('/api/tasks');
         if (!res.ok) {
           throw new Error('Error al cargar las tareas');
         }
@@ -80,7 +80,7 @@ export default function Home() {
       )
     );
 
-    const response = await fetch(`http://localhost:3000/api/tasks/${id}`, {
+    const response = await fetch(`/api/tasks/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ export default function Home() {
 
     try{
 
-      const response = await fetch(`http://localhost:3000/api/tasks/${id}`,{
+      const response = await fetch(`/api/tasks/${id}`,{
         method:'DELETE',
       });
 
@@ -140,7 +140,7 @@ export default function Home() {
   async function editTask(id: string, newName: string){
 
     try{
-      const response = await fetch (`http://localhost:3000/api/tasks/${id}`,
+      const response = await fetch (`/api/tasks/${id}`,
         {
           method:'PUT',
           headers:{
@@ -189,7 +189,7 @@ export default function Home() {
 
   async function addTask(name:string){
     try{
-      const response = await fetch('http://localhost:3000/api/tasks',{
+      const response = await fetch('/api/tasks',{
         method: 'POST',
         headers:{
           'Content-Type':'application/json',
