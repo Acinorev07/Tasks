@@ -1,13 +1,16 @@
+//src/app/api/tasks/[id]/route.ts
+
 import { db } from "@/lib/firebase"
 import {doc, updateDoc, deleteDoc, getDoc} from "firebase/firestore"
 import { NextResponse } from "next/server";
 
 
 
-export async function PUT(request: Request,  {params}:{params:{id:string}}){
+export async function PUT(request: Request){
   try{
 
-    const {id}=params;
+    const url = new URL(request.url);
+    const id = url.pathname.split("/").pop();
     const {completed, name} = await request.json();
 
     if (!id) {
