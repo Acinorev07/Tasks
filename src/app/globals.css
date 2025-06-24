@@ -327,4 +327,22 @@ body {
 .c-cb > input[type="checkbox"]:checked + label::after {
   opacity: 1;
 }
+
+textarea {
+  /* To make sure that all text fields have the same font settings
+     By default, text areas have a monospace font */
+  font: 1em sans-serif;
+  /* Uniform text field size */
+  width: 300px;
+  box-sizing: border-box;
+  /* Match form field borders */
+  border: 2px solid #000
+}
+
+.todo-label .datetime {
+  font-size: 1.4rem;
+  color: #666;
+  margin-top: 0.5rem;
+  display: block;
+}
 /* End checkbox styles */

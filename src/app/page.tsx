@@ -19,6 +19,8 @@ function usePrevious<T>(value:T): T | undefined {
 interface Task {
   id:string;
   name: string;
+  description: string;
+  datetime: string | null; // Puede ser null si no se especifica
   completed: boolean;
 }
 
@@ -137,18 +139,21 @@ export default function Home() {
 
   }
 
-  async function editTask(id: string, newName: string){
+  async function editTask(id: string, newName?: string, newDescription?: string){
 
     try{
+      // Crear un objeto con solo los campos que se estan editando
+      const updateData: {name?: string; description?:string}={};
+      if (newName !== undefined) updateData.name = newName;
+      if (newDescription !== undefined) updateData.description= newDescription;
+
       const response = await fetch (`/api/tasks/${id}`,
         {
           method:'PUT',
           headers:{
             'Content-Type':'application/json',
           },
-          body: JSON.stringify({
-            name: newName
-          }),
+          body: JSON.stringify(updateData),
         });
         if(!response.ok){
           throw new Error ('Error al editar la tarea');
@@ -175,41 +180,55 @@ export default function Home() {
  const taskList = tasks
  .filter(FILTER_MAP[filter as keyof typeof FILTER_MAP])
  .map((task)=>(
- 
+
+    
+
     <Todo
        key={`${task.id}-${task.completed}`}
        id={task.id}
        name={task.name}
+       description={task.description}
+       datetime={task.datetime}
        completed={task.completed}
        toggleTaskCompleted={toggleTaskCompleted}
        deleteTask={deleteTask}
        editTask={editTask}
     />
+    
   ));
 
-  async function addTask(name:string){
+  async function addTask(name:string, description: string, datetime: string){
     try{
+
+      // Validación adicional en el frontend
+        if (!name.trim()) {
+          setError('El nombre de la tarea es requerido');
+          return;
+        }
       const response = await fetch('/api/tasks',{
         method: 'POST',
         headers:{
           'Content-Type':'application/json',
         },
         body: JSON.stringify({
-          name,
+          name:name.trim(),
+          description: description.trim(),
+          datetime: datetime || null,
           completed:false
         }),
       });
 
-      if(!response.ok){
-        throw new Error ('Error al añadir la tarea');
-      }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al añadir la tarea');
+       }
 
       const newTask = await response.json();
       console.log('New Task:', newTask);
       setTasks([...tasks, newTask])
     }catch(error){
-      console.error('Error: ', error);
-      setError('No se pudo añadir la tarea');
+      console.error('Error:', error);
+      setError(error instanceof Error ? error.message : 'Error desconocido');
     }
     // const newTask = {id: `todo-${nanoid()}`, name, completed: false};
     // setTasks([...tasks, newTask]);
@@ -225,15 +244,8 @@ export default function Home() {
       setFilter ={setFilter}
       />
   ));
-
-
-
- 
-
   const tasksNoun = taskList.length !== 1 ? "tasks" : "task";
   const headingText = `${taskList.length} ${tasksNoun} remaining`;
-
-  
   console.log("Datos", taskList);
 
   const prevTaskLength = usePrevious(tasks.length);

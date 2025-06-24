@@ -11,7 +11,7 @@ export async function PUT(request: Request){
 
     const url = new URL(request.url);
     const id = url.pathname.split("/").pop();
-    const {completed, name} = await request.json();
+    const {completed, name, description} = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -30,6 +30,7 @@ export async function PUT(request: Request){
     // Actualiza solo los campos proporcionados
     if (completed !== undefined) updateData.completed = completed;
     if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
 
     await updateDoc(taskRef, updateData);
     
